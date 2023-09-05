@@ -1,0 +1,122 @@
+x-mongo-config:
+  &env_mongo
+  MONGODB_URI: mongodb://mongodb:27017/chat-db?authSource=admin
+  MONGODB_USERNAME: root
+  MONGODB_PASSWORD: "@3Hidu9bL12Mv73z@qKuV^TTYxZ15U#k"
+  MONGODB_REPLICASET: rs0
+  MONGODB_REPLICA_SET_NAME: rs0
+  MONGODB_REPLICA_SET_MODE: primary
+  MONGODB_REPLICA_SET_KEY: replsetkey
+  MONGODB_ROOT_PASSWORD: "@3Hidu9bL12Mv73z@qKuV^TTYxZ15U#k"
+  MONGODB_ADVERTISED_HOSTNAME: mongodb
+  MONGODB_MIN_POOL_SIZE: 1
+  MONGODB_MAX_POOL_SIZE: 5
+
+x-postgres-config:
+  &env_postgres
+  POSTGRES_PASSWORD: C7SQKr@g6SwtXNi
+
+x-env-redis:
+  &env_redis
+  REDIS_PASSWORD: NhsZHN25I2btW#SHVBZP1lB#4m9BY&sb
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  REDIS_ARGS: "--save 20 1 --loglevel warning --requirepass eYVX7EwVmmxKPCDmwMtyKVge8oLd2t81"
+
+x-env-kafka:
+  &env_kafka
+  KAFKA_BROKER_ID: 1
+  KAFKA_BROKER_ADDRESS: kafka:9092
+  #KAFKA_BROKER_ADDRESS: localhost:9092
+  KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://:9092
+  #KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+  ALLOW_PLAINTEXT_LISTENER: 'yes'
+  KAFKA_ENABLE_KRAFT: 'yes'
+  KAFKA_CFG_PROCESS_ROLES: broker,controller
+  KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+  KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+  KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@127.0.0.1:9093
+
+services:
+  messages-worker:
+    image: messages-worker
+    hostname: messages-worker
+    #working_dir: /usr/src/app
+    ports: [ '9090:9090' ]
+    volumes: [ ./apps/messages-worker:/usr/src/app ]
+    #command: gradle run --no-daemon
+    mem_limit: 4096MB
+    environment:
+      <<: [ *env_redis, *env_mongo, *env_postgres, *env_kafka ]
+      APP_CONFIG_FILE: application-docker.properties
+      EXPOSED_PORT: 9090
+    depends_on:
+      - kafka
+      - mongodb
+      - redis
+
+  messages-worker-1:
+    image: messages-worker
+    hostname: messages-worker
+    #working_dir: /usr/src/app
+    ports: [ '9091:9090' ]
+    volumes: [ ./apps/messages-worker:/usr/src/app ]
+    #command: gradle run --no-daemon
+    mem_limit: 4096MB
+    environment:
+      <<: [ *env_redis, *env_mongo, *env_postgres, *env_kafka ]
+      APP_CONFIG_FILE: application-docker.properties
+      EXPOSED_PORT: 9091
+    depends_on:
+      - kafka
+      - mongodb
+      - redis
+
+  ws-server:
+    image: gradle:jdk18
+    hostname: ws-server
+    working_dir: /usr/src/app
+    ports: [ '8080:8080' ]
+    volumes: [ ./apps/ws-server:/usr/src/app ]
+    command: gradle run
+    mem_limit: 4096MB
+    environment:
+      <<: [ *env_redis, *env_mongo, *env_postgres, *env_kafka ]
+      APP_CONFIG_FILE: /usr/src/app/app/src/main/resources/application-docker.properties
+    depends_on:
+      - kafka
+      - mongodb
+      - redis
+      - postgres
+
+  mongodb:
+    image: bitnami/mongodb:4.2
+    hostname: mongodb
+    ports: [ '27018:27017' ]
+    environment:
+      <<: *env_mongo
+
+  postgres:
+    image: bitnami/postgresql:14.6.0
+    hostname: postgres
+    restart: always
+    ports: [ '5432:5432' ]
+    environment:
+      <<: *env_postgres
+
+  redis:
+    image: redis/redis-stack:6.2.6-v6
+    hostname: redis
+    restart: always
+    ports: [ '6379:6379' ]
+    environment:
+      <<: *env_redis
+
+  kafka:
+    image: bitnami/kafka:3.3.1
+    hostname: kafka
+    restart: always
+    ports: [ '9092:9092' ]
+    environment:
+      <<: *env_kafka
