@@ -1,9 +1,7 @@
 package ws.server.domain.services
 
-import ws.server.api.model.ChatDto
-import ws.server.api.model.ConnectDto
-import ws.server.api.model.MessageDto
-import ws.server.api.model.WebSocketDto
+import ws.server.api.model.*
+import ws.server.infrastructure.databases.postgres.User
 
 class ChatService(
     val channelService: ChannelService,
@@ -15,15 +13,17 @@ class ChatService(
         println("User $userName wants to connect to channel $channelName...")
         val user = userService.createUserIfDoesNotExists(userName)
         val channel = channelService.createChannelIfDoesNotExists(channelName)
-
+        val member = channelService.addMember(channel, user)
         val messageWorker = messageWorkersService.findSuitableMessageWorker()
 
         var chats: ChatDto? = null
+        var listActiveMembers: List<User> = emptyList()
         if (snapshot) {
             val listMessages = channelService.listMessages(channelName, 0, 10)
             chats = ChatDto(messages = listMessages.map { MessageDto.toApi(it) })
+            listActiveMembers = channelService.listActiveMembers(channel)
         }
 
-        return ConnectDto(webSocket = WebSocketDto.toApi(messageWorker, user, channel), chat = chats)
+        return ConnectDto(webSocket = WebSocketDto.toApi(messageWorker, user, channel, member), chat = chats, activeMembers = listActiveMembers.map { UserDto( it.name) })
     }
 }

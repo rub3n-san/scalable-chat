@@ -12,7 +12,7 @@ COPY ./app ./app/
 RUN gradle clean build
 
 # Create the final image with JRE 18
-FROM openjdk:17-jdk-slim
+FROM openjdk:18-jdk-slim
 
 # Set the working directory
 WORKDIR /app

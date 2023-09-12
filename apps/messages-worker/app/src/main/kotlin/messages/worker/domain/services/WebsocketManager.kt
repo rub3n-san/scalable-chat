@@ -4,15 +4,15 @@ import io.ktor.websocket.*
 import java.util.concurrent.ConcurrentHashMap
 
 
-data class Session(val websocket: WebSocketSession, val userName: String)
+data class Session(val websocket: WebSocketSession, val userName: String, val memberId: Long)
 
 object WebsocketManager {
     private var websocketSessions: ConcurrentHashMap<String, MutableSet<Session>> =
         ConcurrentHashMap<String, MutableSet<Session>>()
     private var lastKeys: Set<String> = emptySet()
 
-    fun addSession(channelName: String, userName: String, session: WebSocketSession) {
-        val newSession = Session(session, userName)
+    fun addSession(channelName: String, userName: String, memberId: Long, session: WebSocketSession) {
+        val newSession = Session(session, userName, memberId)
         websocketSessions
             .getOrPut(channelName) { mutableSetOf() }
             .add(newSession)

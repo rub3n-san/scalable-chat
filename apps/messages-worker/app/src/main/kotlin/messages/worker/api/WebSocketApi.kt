@@ -23,10 +23,11 @@ fun Application.configureWebSockets(
             //TODO: Validate connection
             val user = call.parameters["user"].toString() // Accessing the parameter from the path
             val channel = call.parameters["channel"] ?: "delete"
+            val memberId = call.parameters["memberId"]!!.toLong()
 
-            println("User $user connected to channel $channel!")
+            println("User $user connected to channel $channel! [memberId]: $memberId")
 
-            messageWorkerService.connect(channel, user, this)
+            messageWorkerService.connect(channel, user, memberId,this)
 
             try {
                 send("connected!")
@@ -34,8 +35,10 @@ fun Application.configureWebSockets(
                     when (frame) {
                         is Frame.Text -> {
                             val receivedText = frame.readText()
+                            println("Received from $user - $receivedText")
                             //This is here for testing purposes, the client should post a new message/chat directly through the endpoint and not via websocket
                             postChatService.postChat(channel, user, receivedText)
+                            println("Message sent $user - $receivedText")
                         }
                         // Handle other types of frames if needed
                         else -> {
@@ -48,7 +51,7 @@ fun Application.configureWebSockets(
             } finally {
                 println("Removing $user from active user!")
                 close(CloseReason(CloseReason.Codes.NORMAL, "Closing the connection"))
-                messageWorkerService.disconnect(channel, user)
+                messageWorkerService.disconnect(channel, user, memberId)
             }
         }
     }

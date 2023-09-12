@@ -78,6 +78,7 @@ fun main() {
     val kafkaConsumer = KafkaConsumer(properties, messageWorkerRankingService.selfNumber)
     val localUserSessionManager = WebsocketManager
 
+    val postChatService = PostChatService(properties.getProperty("wsserver.url", "localhost:8080"))
 
     val mongoDb = MongoDb(properties)
     val chatContentStoreImpl = ChatContentStoreImpl(mongoDb)
@@ -85,11 +86,11 @@ fun main() {
         kafkaConsumer = kafkaConsumer,
         websocketManager = localUserSessionManager,
         messageWorkerRankingService = messageWorkerRankingService,
-        chatContentStore = chatContentStoreImpl
+        chatContentStore = chatContentStoreImpl,
+        postChatService = postChatService
 
     )
 
-    val postChatService = PostChatService(properties.getProperty("wsserver.url", "localhost:8080"))
 
 
     Thread.setDefaultUncaughtExceptionHandler { _, e ->

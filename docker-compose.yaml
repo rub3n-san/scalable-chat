@@ -26,10 +26,10 @@ x-env-redis:
 x-env-kafka:
   &env_kafka
   KAFKA_BROKER_ID: 1
-  KAFKA_BROKER_ADDRESS: kafka:9092
-  #KAFKA_BROKER_ADDRESS: localhost:9092
-  KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://:9092
-  #KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+  #KAFKA_BROKER_ADDRESS: kafka:9092
+  KAFKA_BROKER_ADDRESS: localhost:9092
+  #KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://:9092
+  KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
   ALLOW_PLAINTEXT_LISTENER: 'yes'
   KAFKA_ENABLE_KRAFT: 'yes'
   KAFKA_CFG_PROCESS_ROLES: broker,controller
@@ -56,34 +56,35 @@ services:
       - mongodb
       - redis
 
-  messages-worker-1:
-    image: messages-worker
-    hostname: messages-worker
-    #working_dir: /usr/src/app
-    ports: [ '9091:9090' ]
-    volumes: [ ./apps/messages-worker:/usr/src/app ]
-    #command: gradle run --no-daemon
-    mem_limit: 4096MB
-    environment:
-      <<: [ *env_redis, *env_mongo, *env_postgres, *env_kafka ]
-      APP_CONFIG_FILE: application-docker.properties
-      EXPOSED_PORT: 9091
-    depends_on:
-      - kafka
-      - mongodb
-      - redis
+  #messages-worker-1:
+  #  image: messages-worker
+  #  hostname: messages-worker
+  #  #working_dir: /usr/src/app
+  #  ports: [ '9091:9090' ]
+  #  volumes: [ ./apps/messages-worker:/usr/src/app ]
+  #  #command: gradle run --no-daemon
+  #  mem_limit: 4096MB
+  #  environment:
+  #    <<: [ *env_redis, *env_mongo, *env_postgres, *env_kafka ]
+  #    APP_CONFIG_FILE: application-docker.properties
+  #    EXPOSED_PORT: 9091
+  #  depends_on:
+  #    - kafka
+  #    - mongodb
+  #    - redis
 
   ws-server:
-    image: gradle:jdk18
+    image: ws-server
     hostname: ws-server
-    working_dir: /usr/src/app
+    #working_dir: /usr/src/app
     ports: [ '8080:8080' ]
     volumes: [ ./apps/ws-server:/usr/src/app ]
-    command: gradle run
+    #command: gradle run
     mem_limit: 4096MB
     environment:
       <<: [ *env_redis, *env_mongo, *env_postgres, *env_kafka ]
-      APP_CONFIG_FILE: /usr/src/app/app/src/main/resources/application-docker.properties
+      #APP_CONFIG_FILE: /usr/src/app/app/src/main/resources/application-docker.properties
+      APP_CONFIG_FILE: application-docker.properties
     depends_on:
       - kafka
       - mongodb

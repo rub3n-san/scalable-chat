@@ -15,6 +15,7 @@ CREATE TABLE t_member (
                        id SERIAL PRIMARY KEY,
                        user_id BIGINT REFERENCES t_user(id) NOT NULL,
                        channel_id BIGINT REFERENCES t_channel(id) NOT NULL,
+                       connected BOOLEAN,
                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -1,6 +1,10 @@
 package messages.worker.infrastructure.amqp.kafka
 
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
@@ -12,7 +16,7 @@ class KafkaConsumer(properties: Properties, instanceId: Long) {
     private val url: String = properties.getProperty("amqp.kafka.url", "localhost:9092")
     private val groupId = properties.getProperty("amqp.kafka.groupid", "chat-content-group")
     private val consumer: KafkaConsumer<String, ByteArray>
-
+    private val json: Json
     init {
         val selfGroupId = "$groupId-$instanceId"
         val selfInstanceId = "message-worker-$instanceId"
@@ -28,21 +32,33 @@ class KafkaConsumer(properties: Properties, instanceId: Long) {
         kafkaProps[ConsumerConfig.GROUP_INSTANCE_ID_CONFIG] = selfInstanceId
         println("Kafka consumer created with instance id $selfInstanceId on groupId $selfGroupId")
         consumer = KafkaConsumer<String, ByteArray>(kafkaProps)
+
+        json = Json {
+            serializersModule = SerializersModule {
+                polymorphic(BaseMessage::class) {
+                    subclass(NewMessage::class)
+                    subclass(MemberConnected::class)
+                    subclass(MemberDisconnected::class)
+                }
+            }
+        }
     }
 
-    fun fetchChats(): Map<String, List<String>> {
-        val messages = consumer.poll(Duration.ofMillis(200))
-        val documentIds: List<Pair<String, String>> = messages.map {
-            val serializedDocument = String(it.value())
-            val chat = Json.decodeFromString<Chat>(serializedDocument)
-            println("Received chat: $chat for channel: ${it.topic()}")
-            Pair(it.topic(), chat.documentId)
-        }
-        return documentIds.groupBy(
+    fun listen(): Map<String, List<BaseMessage>> {
+        return consumer.poll(Duration.ofMillis(200)).map {
+            try {
+                val baseMessage: BaseMessage = json.decodeFromString(String(it.value()))
+                Pair(it.topic(), baseMessage)
+            }catch (e: Exception){
+                println(e)
+                println("Error while processing kafka message. topic ${it.topic()} message: ${String(it.value())}")
+                Pair("unknown", ErrorMessage())
+            }
+
+        }.groupBy(
             keySelector = { it.first },
             valueTransform = { it.second }
         )
-
     }
 
     fun updateSubscriptions(channels: Set<String>) {

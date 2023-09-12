@@ -5,7 +5,7 @@ import com.mongodb.MongoCredential
 import com.mongodb.ServerAddress
 import com.mongodb.client.MongoClient
 import com.mongodb.client.MongoClients
-import messages.worker.domain.model.ChatContent
+import messages.worker.domain.model.WSChatContent
 import org.bson.Document
 import org.bson.types.ObjectId
 import java.util.*
@@ -25,31 +25,26 @@ class MongoDb(properties: Properties) {
         password.toCharArray()
     )
 
-    fun createClient(): MongoClient = MongoClients.create(
-        MongoClientSettings.builder()
-            .applyToClusterSettings { b -> b.hosts(listOf(ServerAddress(url))) }
-            .credential(createPlainCredential).build())
+    private val _client: MongoClient by lazy {
+        MongoClients.create(
+            MongoClientSettings.builder()
+                .applyToClusterSettings { b -> b.hosts(listOf(ServerAddress(url))) }
+                .credential(createPlainCredential).build())
+    }
+
+    fun getMongoClient(): MongoClient = _client
 
 }
 
 class ChatContentStoreImpl(val mongoDb: MongoDb) : ChatContentStore {
+    private val client = mongoDb.getMongoClient()
+    private val database = client.getDatabase(mongoDb.databaseName)
+    private val collection = database.getCollection(mongoDb.colllection)
 
-    override fun fetchContent(documentIds: List<String>): List<ChatContent> {
-        val client = mongoDb.createClient()
-
-        val database = client.getDatabase(mongoDb.databaseName)
-        val collection = database.getCollection(mongoDb.colllection)
-
+    override fun fetchContent(documentIds: List<String>): List<WSChatContent> {
         val objectIds = documentIds.map { ObjectId(it) }
         val query = Document("_id", Document("\$in", objectIds))
-
-        try {
-            return collection.find(query).map { ChatContent.fromMongoDbDocument(it) }.toList()
-        } catch (e: Exception) {
-            throw e
-        } finally {
-            client.close()
-        }
+        return collection.find(query).map { WSChatContent.fromMongoDbDocument(it) }.toList()
     }
 
 }

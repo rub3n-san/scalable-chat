@@ -17,3 +17,6 @@ When this service start up, it registers himself on the list of available messag
 everytime a new user/client connects to the service, it updates its own ranking in order to distribute the load with
 other messages-worker's.
 
+
+## To build 
+``docker build -t messages-worker .``

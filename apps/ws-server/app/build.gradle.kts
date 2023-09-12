@@ -75,6 +75,23 @@ application {
     mainClass.set("ws.server.WebServerAppKt")
 }
 
+
+tasks.withType<Jar> {
+    manifest {
+        attributes["Main-Class"] = "ws.server.WebServerAppKt"
+    }
+
+    // To avoid the duplicate handling strategy error
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    // To add all of the dependencies
+    from(sourceSets.main.get().output)
+
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
+    })
+}
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()

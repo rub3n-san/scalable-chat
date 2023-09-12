@@ -22,8 +22,10 @@ class WebsocketManagerTest {
     fun `addSession adds a session to the websocketSessions`() {
         val channelName = "testChannel"
         val userName = "testUser"
+        val memberId = 1L
 
-        WebsocketManager.addSession(channelName, userName, session)
+
+        WebsocketManager.addSession(channelName, userName, memberId, session)
 
         val sessions = WebsocketManager.listSessions(channelName)
         Assertions.assertTrue(sessions.any { it.userName == userName && it.websocket == session })
@@ -33,7 +35,8 @@ class WebsocketManagerTest {
     fun `listSessions returns the set of sessions for a given channel`() {
         val channelName = "testChannel"
         val userName = "testUser"
-        WebsocketManager.addSession(channelName, userName, session)
+        val memberId = 1L
+        WebsocketManager.addSession(channelName, userName, memberId, session)
 
         val sessions = WebsocketManager.listSessions(channelName)
 
@@ -44,7 +47,8 @@ class WebsocketManagerTest {
     fun `removeSession removes a session from the websocketSessions`() {
         val channelName = "testChannel"
         val userName = "testUser"
-        WebsocketManager.addSession(channelName, userName, session)
+        val memberId = 1L
+        WebsocketManager.addSession(channelName, userName, memberId, session)
 
         WebsocketManager.removeSession(channelName, userName)
 
@@ -54,8 +58,9 @@ class WebsocketManagerTest {
 
     @Test
     fun `checkForNewSubscriptions returns true and new keys if keys changed`() {
-        WebsocketManager.addSession("channel1", "user1", mockk())
-        WebsocketManager.addSession("channel2", "user2", mockk())
+        val memberId = 1L
+        WebsocketManager.addSession("channel1", "user1", memberId, mockk())
+        WebsocketManager.addSession("channel2", "user2", memberId, mockk())
 
         val (keysChanged, currentKeys) = WebsocketManager.checkForNewSubscriptions()
 
@@ -84,7 +89,8 @@ class WebsocketManagerTest {
 
     @Test
     fun `hasSubscriptions returns true when there are subscriptions`() {
-        WebsocketManager.addSession("channel1", "user1", mockk())
+        val memberId = 1L
+        WebsocketManager.addSession("channel1", "user1", memberId, mockk())
 
         val hasSubscriptions = WebsocketManager.hasSubscriptions()
 

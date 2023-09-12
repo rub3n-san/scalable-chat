@@ -25,57 +25,34 @@ class MongoDb(properties: Properties) {
         password.toCharArray()
     )
 
-    fun createClient(): MongoClient = MongoClients.create(
-        MongoClientSettings.builder()
-            .applyToClusterSettings { b -> b.hosts(listOf(ServerAddress(url))) }
-            .credential(createPlainCredential).build())
+    private val _client: MongoClient by lazy {
+        MongoClients.create(
+            MongoClientSettings.builder()
+                .applyToClusterSettings { b -> b.hosts(listOf(ServerAddress(url))) }
+                .credential(createPlainCredential).build())
+    }
+
+    fun getMongoClient(): MongoClient = _client
 
 }
 
-class ChatContentDbImpl(val mongoDb: MongoDb) : ChatContentStore {
-    override fun fetchContent(documentIds: List<String>): List<ChatContent> {
-        val client = mongoDb.createClient()
+class ChatContentDbImpl(mongoDb: MongoDb) : ChatContentStore {
+    private val client = mongoDb.getMongoClient()
+    private val database = client.getDatabase(mongoDb.databaseName)
+    private val collection = database.getCollection(mongoDb.colllection)
 
-        val database = client.getDatabase(mongoDb.databaseName)
-        val collection = database.getCollection(mongoDb.colllection)
+    override fun fetchContent(documentIds: List<String>): List<ChatContent> {
         val objectIds = documentIds.map { ObjectId(it) }
         val query = Document("_id", Document("\$in", objectIds))
-
-        try {
-            return collection.find(query).map { ChatContent.fromMongoDbDocument(it) }.toList()
-        } catch (e: Exception) {
-            throw e
-        } finally {
-            client.close()
-        }
-
+        return collection.find(query).map { ChatContent.fromMongoDbDocument(it) }.toList()
     }
 
     override fun saveContent(content: String, channelName: String, userName: String, createdAt: LocalDateTime): String {
-        val client = mongoDb.createClient()
+        val insertedId = collection.insertOne(
+            ChatContent.toMongoDbDocument(content, channelName, userName, createdAt)
+        ).insertedId
 
-        val database = client.getDatabase(mongoDb.databaseName)
-        val collection = database.getCollection(mongoDb.colllection)
-
-        try {
-
-            val insertedId =
-                collection.insertOne(
-                    ChatContent.toMongoDbDocument(
-                        content,
-                        channelName,
-                        userName,
-                        createdAt
-                    )
-                ).insertedId
-
-            println("Chat document inserted with _id [$insertedId]")
-            return insertedId?.asObjectId()?.value.toString()
-        } catch (e: Exception) {
-            println(e)
-            throw e
-        } finally {
-            client.close()
-        }
+        println("Chat document inserted with _id [$insertedId]")
+        return insertedId?.asObjectId()?.value.toString()
     }
 }

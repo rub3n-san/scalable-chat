@@ -10,4 +10,8 @@
 
 ## Mac os
 
-`python3 client.py`
+`python3 tui-textual.py`
+
+# Pack
+
+`pyinstaller --onefile tui_textual.py`

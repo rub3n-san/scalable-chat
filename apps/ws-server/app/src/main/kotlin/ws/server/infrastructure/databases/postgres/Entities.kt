@@ -5,7 +5,7 @@ import java.time.LocalDateTime
 
 interface User: Entity<User> {
     companion object: Entity.Factory<User>()
-    val id: Long
+    var id: Long
     var name:String
     val createdAt: LocalDateTime
     var lastLogin: LocalDateTime
@@ -20,8 +20,9 @@ interface Channel : Entity<Channel>{
 interface Member : Entity<Member>{
     companion object: Entity.Factory<Member>()
     val id: Long
-    val userId: Long
-    val channelId: Long
+    var userId: Long
+    var channelId: Long
+    var connected: Boolean
     val createdAt: LocalDateTime
 }
 

@@ -12,6 +12,7 @@ import io.ktor.server.util.*
 import kotlinx.serialization.json.Json
 import messages.worker.infrastructure.amqp.kafka.KafkaProducerImpl
 import sun.security.pkcs.ParsingException
+import ws.server.api.model.ConnectedDto
 import ws.server.api.model.ExceptionResponse
 import ws.server.api.model.MessageDto
 import ws.server.api.model.PostMessageDto
@@ -104,6 +105,13 @@ class ChatApi(
                     )
 
                     call.respond(mapOf("received" to message.content))
+                }
+                post("{channel}/connected"){
+                    val channelName = call.parameters.getOrFail("channel")
+                    val user = call.request.header("user").toString()
+                    val connected = call.receive<ConnectedDto>()
+                    channelService.setConnected(channelName, user, connected.memberId, connected.connected)
+                    call.respondText("OK")
                 }
             }
 

@@ -13,7 +13,6 @@ import ws.server.infrastructure.databases.mongodb.MongoDb
 import ws.server.infrastructure.databases.postgres.MetadataPostgresDb
 import ws.server.infrastructure.databases.redis.ReddisDatabase
 import ws.server.infrastructure.databases.redis.RedisStoreImpl
-import java.io.FileInputStream
 import java.util.*
 
 class WebServerApp {
@@ -24,32 +23,19 @@ class WebServerApp {
 }
 
 fun main(args: Array<String>) {
-
     println(WebServerApp().greeting)
 
-    val APP_CONFIG_FILE = System.getenv("APP_CONFIG_FILE")
-    val isLocal = System.getenv("APP_CONFIG_FILE") == null
-
-    val DEFAULT_CONFIG_FILE =
-        if (isLocal) "apps/ws-server/app/src/main/resources/application.properties" else "/usr/src/app/app/src/main/resources/application.properties"
-
+    val DEFAULT_CONFIG_FILE = "application.properties"
     val properties = Properties()
-    // Load properties from the default file
-    val propertyFile = FileInputStream(DEFAULT_CONFIG_FILE)
-    properties.load(propertyFile)
+    val propertiesStream = Thread.currentThread().contextClassLoader.getResourceAsStream(DEFAULT_CONFIG_FILE)
+    properties.load(propertiesStream)
 
-    // Load environment-specific properties (e.g., application-docker.properties)
-    val envProperties = Properties()
-    println("APP_CONFIG_FILE: $APP_CONFIG_FILE")
-    val envConfigFile = APP_CONFIG_FILE ?: DEFAULT_CONFIG_FILE
-    println("Using config file $envConfigFile")
-
-    FileInputStream(envConfigFile).use { input ->
-        envProperties.load(input)
+    val APP_CONFIG_FILE = System.getenv("APP_CONFIG_FILE")
+    if (APP_CONFIG_FILE != null) {
+        val specificEnvProperties = envSpecificProperties(APP_CONFIG_FILE)
+        // Override default properties with environment-specific properties
+        properties.putAll(specificEnvProperties)
     }
-
-    // Override default properties with environment-specific properties
-    properties.putAll(envProperties)
 
     val migration = FlywayMigration(properties)
     migration.migrate()
@@ -67,6 +53,15 @@ fun main(args: Array<String>) {
     embeddedServer(Netty, port = webserverPort) {
         chatApi.apply { main() }
     }.start(wait = true)
+}
+
+private fun envSpecificProperties(APP_CONFIG_FILE: String): Properties {
+    // Load environment-specific properties (e.g., application-docker.properties)
+    val envProperties = Properties()
+    println("Using environment-specific config file: $APP_CONFIG_FILE")
+    val specificEnvFile = Thread.currentThread().contextClassLoader.getResourceAsStream(APP_CONFIG_FILE)
+    envProperties.load(specificEnvFile)
+    return envProperties
 }
 
 
